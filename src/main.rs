@@ -64,9 +64,11 @@ impl TabuList {
     }
 }
 
-fn get_sum(mat: &'_ Mat) -> impl Iterator<Item = Int> + '_ {
-    mat.rows().into_iter().map(|row| row.sum())
+
+fn get_sum(mat: &'_ Mat) -> impl IndexedParallelIterator<Item = Int> + '_ {
+    mat.axis_iter(ndarray::Axis(0)).into_par_iter().map(|row| row.sum())
 }
+
 
 fn get_percentage_error<T: Into<f64>>(a: T, b: T) -> f64 {
     let a = a.into();
@@ -77,10 +79,10 @@ fn get_percentage_error<T: Into<f64>>(a: T, b: T) -> f64 {
 fn get_error<'a>(
     mat: &'a Mat,
     correct: &'a [Int],
-) -> impl Iterator<Item = (usize, (f64, Int))> + 'a {
+) -> impl ParallelIterator<Item = (usize, (f64, Int))> + 'a {
     let row_sum = get_sum(mat);
     correct
-        .iter()
+        .par_iter()
         .zip(row_sum)
         .map(|(a, b)| (get_percentage_error(*a, b), a - b))
         .enumerate()
@@ -249,9 +251,7 @@ fn run_tabu_search(config: Config) {
         }
         println!();
     }
-    for val in get_sum(&mat).zip(&config.traffic_vector) {
-        println!("{:?}", val)
-    }
+    get_sum(&mat).zip(&config.traffic_vector).enumerate().for_each(|val| println!("{:?}", val));
 }
 fn main() {
     let args = Arguments::from_args();
