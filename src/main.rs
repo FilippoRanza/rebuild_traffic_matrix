@@ -18,7 +18,7 @@ struct Arguments {
     ternure_len: Option<Int>,
     momentum: Option<f64>,
     max_noise: Option<Int>,
-    perturbation: Option<Int>
+    perturbation: Option<Int>,
 }
 
 fn usize_below(th: usize) -> usize {
@@ -66,13 +66,17 @@ impl TabuList {
     }
 }
 
-
 fn get_sum(mat: &'_ Mat) -> impl IndexedParallelIterator<Item = Int> + '_ {
-    let row_iter = mat.axis_iter(ndarray::Axis(0)).into_par_iter().map(|row| row.sum());
-    let col_iter = mat.axis_iter(ndarray::Axis(1)).into_par_iter().map(|row| row.sum());
+    let row_iter = mat
+        .axis_iter(ndarray::Axis(0))
+        .into_par_iter()
+        .map(|row| row.sum());
+    let col_iter = mat
+        .axis_iter(ndarray::Axis(1))
+        .into_par_iter()
+        .map(|row| row.sum());
     col_iter.zip(row_iter).map(|(c, r)| c + r)
 }
-
 
 fn get_percentage_error<T: Into<f64>>(a: T, b: T) -> f64 {
     let a = a.into();
@@ -162,7 +166,6 @@ fn apply_perturbation(update: Int, delta: Int, value: Int) -> Int {
     }
 }
 
-
 fn update_traffic_value(output: &mut Mat, index: (usize, usize), abs_err: Int, perturbation: Int) {
     let (i, j) = index;
     let update = scale_value(abs_err, output.nrows());
@@ -222,7 +225,7 @@ struct Config {
     tenure: Int,
     momentum: f64,
     max_noise: Int,
-    perturbation: Int
+    perturbation: Int,
 }
 
 impl Config {
@@ -240,7 +243,7 @@ impl Config {
             tenure,
             momentum,
             max_noise,
-            perturbation
+            perturbation,
         })
     }
 }
@@ -268,7 +271,10 @@ fn run_tabu_search(config: Config) {
         }
         println!();
     }
-    get_sum(&mat).zip(&config.traffic_vector).enumerate().for_each(|val| println!("{:?}", val));
+    get_sum(&mat)
+        .zip(&config.traffic_vector)
+        .enumerate()
+        .for_each(|val| println!("{:?}", val));
 }
 fn main() {
     let args = Arguments::from_args();
