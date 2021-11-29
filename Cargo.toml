@@ -1,0 +1,8 @@
+[package]
+edition = "2021"
+name = "rebuild_traffic_matrix"
+version = "0.1.0"
+[dependencies]
+fastrand = "1"
+ndarray = {version = "0.15", features = ["rayon"]}
+rayon = "1"
