@@ -9,22 +9,30 @@ type Mat = ndarray::Array2<Int>;
 
 #[derive(Debug)]
 struct TabuList {
-    tabu: Mat,
+    row_tabu: Vec<Int>,
+    col_tabu: Vec<Int>,
     tenure: Int,
 }
 
 impl TabuList {
     fn new(size: usize, tenure: Int) -> Self {
-        let tabu = ndarray::Array2::zeros((size, size));
-        Self { tabu, tenure }
+        let col_tabu = (0..size).map(|_| 0).collect();
+        let row_tabu = (0..size).map(|_| 0).collect();
+        Self { col_tabu, row_tabu, tenure }
     }
 
     fn is_locked(&self, idx: (usize, usize)) -> bool {
-        self.tabu[idx] > 0
+        let (i, j) = idx;
+        self.row_tabu[i] > 0 &&
+        self.row_tabu[j] > 0
     }
 
     fn next_step(&mut self) {
-        self.tabu
+        self.row_tabu
+            .par_iter_mut()
+            .filter(|v| **v > 0)
+            .for_each(|v| *v -= 1);
+        self.col_tabu
             .par_iter_mut()
             .filter(|v| **v > 0)
             .for_each(|v| *v -= 1);
@@ -32,8 +40,8 @@ impl TabuList {
 
     fn set_tabu(&mut self, idx: (usize, usize)) {
         let (i, j) = idx;
-        self.tabu.row_mut(i).into_par_iter().for_each(|v| *v = self.tenure);
-        self.tabu.column_mut(j).into_par_iter().for_each(|v| *v = self.tenure);
+        self.col_tabu[j] = self.tenure;
+        self.row_tabu[i] = self.tenure;
     }
 }
 
