@@ -9,6 +9,7 @@ type Mat = ndarray::Array2<Int>;
 
 const MAX_TRIALS: usize = 10;
 const TENURE_SCALE: usize = 5;
+const DEFAULT_PERTURBATION: Int = 10;
 
 #[derive(StructOpt)]
 struct Arguments {
@@ -17,6 +18,7 @@ struct Arguments {
     ternure_len: Option<Int>,
     momentum: Option<f64>,
     max_noise: Option<Int>,
+    perturbation: Option<Int>
 }
 
 fn usize_below(th: usize) -> usize {
@@ -151,13 +153,23 @@ fn scale_value(val: Int, count: usize) -> Int {
     val / (count as Int)
 }
 
-fn update_traffic_value(output: &mut Mat, index: (usize, usize), abs_err: Int) {
+fn apply_perturbation(update: Int, delta: Int, value: Int) -> Int {
+    let perturbation = update + fastrand::i32(-delta..delta);
+    if value + perturbation < 0 {
+        update
+    } else {
+        perturbation
+    }
+}
+
+
+fn update_traffic_value(output: &mut Mat, index: (usize, usize), abs_err: Int, perturbation: Int) {
     let (i, j) = index;
     let update = scale_value(abs_err, output.nrows());
     let tmp = output[(i, j)] + update;
     if tmp > 0 {
-        output[(i, j)] += update + fastrand::i32(-10..10);
-        output[(j, i)] += update + fastrand::i32(-10..10);
+        output[(i, j)] += apply_perturbation(update, perturbation, output[(i, j)]);
+        output[(j, i)] += apply_perturbation(update, perturbation, output[(j, i)]);
     } else {
         output[(i, j)] = 1;
         output[(j, i)] = 1;
@@ -196,7 +208,7 @@ fn rebuild_arc_traffic(config: &Config) -> Mat {
     let mut tabu = TabuList::new(size, config.tenure);
     while let Some(error) = outside_bound(&output, &config.traffic_vector, config.max_err) {
         if let Some((idx, et)) = find_next_index(&mut tabu, &error, size) {
-            update_traffic_value(&mut output, idx, et)
+            update_traffic_value(&mut output, idx, et, config.perturbation);
         }
         tabu.next_step();
         noise_momentum(&mut output, config.momentum, config.max_noise);
@@ -210,6 +222,7 @@ struct Config {
     tenure: Int,
     momentum: f64,
     max_noise: Int,
+    perturbation: Int
 }
 
 impl Config {
@@ -220,12 +233,14 @@ impl Config {
             .unwrap_or_else(|| get_default_tenure(&traffic_vector));
         let momentum = args.momentum.unwrap_or(0.0);
         let max_noise = args.max_noise.unwrap_or(0);
+        let perturbation = args.perturbation.unwrap_or(DEFAULT_PERTURBATION);
         Ok(Self {
             traffic_vector,
             max_err: args.max_error,
             tenure,
             momentum,
             max_noise,
+            perturbation
         })
     }
 }
