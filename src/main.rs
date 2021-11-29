@@ -157,26 +157,20 @@ fn scale_value(val: Int, count: usize) -> Int {
     val / (count as Int)
 }
 
-fn apply_perturbation(update: Int, delta: Int, value: Int) -> Int {
-    let perturbation = update + fastrand::i32(-delta..delta);
-    if value + perturbation < 0 {
-        update
+fn set_value(mat: &mut Mat, idx: (usize, usize), value: Int, delta: Int) {
+    let tmp = mat[idx] + value + fastrand::i32(-delta..delta);
+    if tmp > 0 {
+        mat[idx] = tmp;
     } else {
-        perturbation
+        mat[idx] = 1;
     }
 }
 
-fn update_traffic_value(output: &mut Mat, index: (usize, usize), abs_err: Int, perturbation: Int) {
+fn update_traffic_value(mat: &mut Mat, index: (usize, usize), abs_err: Int, perturbation: Int) {
     let (i, j) = index;
-    let update = scale_value(abs_err, output.nrows());
-    let tmp = output[(i, j)] + update;
-    if tmp > 0 {
-        output[(i, j)] += apply_perturbation(update, perturbation, output[(i, j)]);
-        output[(j, i)] += apply_perturbation(update, perturbation, output[(j, i)]);
-    } else {
-        output[(i, j)] = 1;
-        output[(j, i)] = 1;
-    }
+    let update = scale_value(abs_err, mat.nrows());
+    set_value(mat, (i, j), update, perturbation);
+    set_value(mat, (j, i), update, perturbation);
 }
 
 fn random_index(size: usize) -> (usize, usize) {
