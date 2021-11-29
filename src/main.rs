@@ -66,7 +66,9 @@ impl TabuList {
 
 
 fn get_sum(mat: &'_ Mat) -> impl IndexedParallelIterator<Item = Int> + '_ {
-    mat.axis_iter(ndarray::Axis(0)).into_par_iter().map(|row| row.sum())
+    let row_iter = mat.axis_iter(ndarray::Axis(0)).into_par_iter().map(|row| row.sum());
+    let col_iter = mat.axis_iter(ndarray::Axis(1)).into_par_iter().map(|row| row.sum());
+    col_iter.zip(row_iter).map(|(c, r)| c + r)
 }
 
 
@@ -154,8 +156,8 @@ fn update_traffic_value(output: &mut Mat, index: (usize, usize), abs_err: Int) {
     let update = scale_value(abs_err, output.nrows());
     let tmp = output[(i, j)] + update;
     if tmp > 0 {
-        output[(i, j)] += update;
-        output[(j, i)] += update;
+        output[(i, j)] += update + fastrand::i32(-10..10);
+        output[(j, i)] += update + fastrand::i32(-10..10);
     } else {
         output[(i, j)] = 1;
         output[(j, i)] = 1;
